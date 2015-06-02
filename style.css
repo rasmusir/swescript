@@ -1,0 +1,69 @@
+
+#output {
+    width: 100%;
+    background: white;
+    color: black;
+    font-family: initial;
+    border: 0;
+}
+
+#code
+{
+    width: 100%;
+    display: flex;
+    font-family: Inconsolata;
+}
+
+#code > .CodeMirror
+{
+    width: 100%;
+    box-sizing: border-box;
+    background-color: white;
+    white-space: pre-line;
+}
+
+#code > .editor div:nth-child(odd)
+{
+    background: rgba(0,0,0,0.01);
+}
+
+html,body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+#container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+#topcontainer {
+    display: flex;
+    align-content: center;
+    height: 100%;
+    position: relative;
+}
+
+#topcontainer > *
+{
+    position: relative;
+    width: 100%;
+    border-left: 1px solid #ddd;
+}
+
+#topcontainer > *:first-child
+{
+    border: 0;
+}
+
+#console {
+    background: #110d1a;
+    height: 300px;
+    color: white;
+    font-family: Inconsolata;
+    padding: 5px;
+    box-sizing: border-box;
+}

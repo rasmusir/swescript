@@ -5,11 +5,14 @@ var frameworks = {
     add: function(obj)
     {
         obj.ops.forEach(function(op) {
-            op.regex = new RegExp(op.pattern.replace(/\(|\)/g,"").replace(/\?((?=[^:])|$)/g,"(\\(.+?\\)|\\\".*?\\\"|(?!\\s)\\S+(?=\\s*))").trim(),"i");
-
+            var types = op.pattern.match(/\?|@/g);
+            if (types)
+                op.argumentTypes = types;
             var hrx = op.pattern.split(/\s+/);
+            op.regex = new RegExp(hrx.join("\\s+").replace(/\(|\)/g,"").replace(/\?((?=[^:])|$|(?=[^!]))/g,"(\\(.+?\\)|\\\".*?\\\"|(?!\\s)\\S+(?=\\s*))").replace(/@/g,"(.*)").trim(),"im");
+
             var ct = 0;
-            hrx = hrx.join("\\s+").replace(/\?((?=[^:])|$)/g,"(?:\\(.+?\\)|\\\".*?\\\"|(?!\\s)\\S+(?=\\s*))").trim();
+            hrx = hrx.join("\\s+").replace(/\?((?=[^:])|$)/g,"(?:\\(.+?\\)|\\\".*?\\\"|(?!\\s)\\S+(?=\\s*))").replace(/@/g,".*").trim();
             sshighlight.push({regex:new RegExp(hrx,"i") , token: op.type, sol: op.sol, indent: op.indent, dedent: op.dedent});
 
             frameworks.ops.push(op);
@@ -25,6 +28,27 @@ window.addEventListener("load",function() {
 
     elements.output = document.querySelector("#output");
     elements.console = document.querySelector("#console");
+    var div = document.createElement("div");
+    div.innerHTML = ">"
+    elements.input = document.createElement("input");
+    div.appendChild(elements.input);
+    elements.console.appendChild(div);
+
+    elements.input.onkeypress = function(e) {
+        if (e.keyCode == 13)
+        {
+            elements.output.contentWindow.postMessage({action:"read",text:elements.input.value},"*");
+            e.preventDefault();
+
+            var div = document.createElement("div");
+            div.innerHTML = elements.input.value;
+            elements.console.insertBefore(div,elements.console.lastChild);
+            elements.console.scrollTop = 100000000;
+
+            elements.input.value = "";
+        }
+    };
+
     elements.run = document.querySelector("#run");
     elements.run.onclick = Compile;
 
@@ -44,7 +68,8 @@ window.addEventListener("message", function(event) {
         case "log":
             var div = document.createElement("div");
             div.innerHTML = data.args[0];
-            elements.console.appendChild(div);
+            elements.console.insertBefore(div,elements.console.lastChild);
+            elements.console.scrollTop = 100000000;
             break;
     }
 });
@@ -109,7 +134,7 @@ function ReadSnippet(snippet,group)
     var snip;
     while ((snip = splitter.exec(snippet)) !== null)
     {
-        snips.push({ snip:snip[0], word:!!snip[3], string: !!snip[2], group: !!snip[1] });
+        snips.push({ snip:snip[0], word:!!snip[3], string: !!snip[2], group: !!snip[1]});
     }
 
     var parts = [];
@@ -158,87 +183,26 @@ function TryExecute(snip)
     }
     if (op)
     {
-        var args = snip.match(reg);
-        return op.code(args.slice(1));
+        var args = snip.match(reg).slice(1);
+        var a = [];
+        var neg = 0;
+        for (var i = 0; i<args.length; i++)
+        {
+            if (!args[i])
+            {
+                neg++;
+                continue;
+            }
+            if (op.argumentTypes[i] == "?")
+            {
+                a.push(args[i]);
+                continue;
+            }
+            a.push(args[i].match(/(\(.*?\))|(".*?")|(\S+)/g));
+        }
+
+        return op.code(a);
     }
     else
         return snip;
-}
-
-function Do(line)
-{
-    if (!line)
-        return{err:true};
-    var lineraw = line;
-    line = line.trim();
-
-    if (line == "")
-        return "\n";
-
-    var splitter = /\(.+?\)|\".*?\"|(?!\s)\S+(?=\s*)/g;
-    var parts = [];
-    var arr;
-    while ( (arr = splitter.exec(line)) !== null)
-    {
-        parts.push({ word:arr[0], construct:arr[1] !== undefined });
-    }
-
-
-    var pattern = line.substr(0,line.indexOf(" "));
-    var op = null;
-    var reg = null;
-
-    for (var i = 0; i< frameworks.ops.length; i++)
-    {
-        var p = frameworks.ops[i];
-        reg = p.regex;
-        if (reg.test(line))
-        {
-            op = p;
-            break;
-        }
-    }
-
-    if (op)
-    {
-        var all = line.match(reg);
-        var argsraw = all.slice(1);
-        var args = [];
-        for (var i=0; i<argsraw.length; i++)
-        {
-            var split = /\(.*?\)|".*?"|\S+/g;
-            splitter.lastIndex = 0;
-            var parts = split.exec(argsraw[i]);
-
-            var res = Do(argsraw[i]);
-            if (res.err)
-            {
-                args.push(argsraw[i]);
-                continue;
-            }
-            args.push(res);
-        }
-
-        if (op.code)
-        {
-            var res = op.code(args);
-            if (res.err)
-                return {err:{line: line,num: curline,msg: res.message}};
-        }
-        else
-            res = all.input;
-        return res;
-    }
-    else
-    {
-
-    }
-    //return {err:{line: line,num: curline}};
-
-    curline++;
-}
-
-function Error(message)
-{
-    this.message = message;
 }

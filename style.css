@@ -66,4 +66,16 @@ html,body {
     font-family: Inconsolata;
     padding: 5px;
     box-sizing: border-box;
+    overflow-y: scroll;
+}
+
+#console input
+{
+    color: white;
+    font-family: Inconsolata;
+    font-size: inherit;
+    border: 0;
+    background: transparent;
+    box-sizing: border-box;
+    outline: none;
 }
